@@ -3,54 +3,124 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ask ai </title>
-<link rel="icon" href="images.jpg">
+<title>AI مش بيهبد</title>
 <style>
 body{margin:0;background:#000;color:#fff;font-family:Arial;height:100vh;display:flex;flex-direction:column}
+#top{display:flex;justify-content:space-between;align-items:center;padding:12px 15px;background:#111;border-bottom:1px solid #333}
+#title{font-size:20px;font-weight:bold}
+#clear{background:#dc2626;border:none;color:#fff;padding:9px 14px;border-radius:20px;cursor:pointer}
 #chat{flex:1;overflow:auto;padding:15px;display:flex;flex-direction:column;gap:10px}
 .msg{padding:12px 15px;border-radius:15px;max-width:90%;line-height:1.7;white-space:pre-wrap}
 .me{background:#7c3aed;align-self:flex-end}
 .bot{background:#18181b;align-self:flex-start;border:1px solid #333}
 #bar{display:flex;gap:8px;padding:12px;background:#111}
-input{flex:1;padding:13px;border-radius:25px;background:#222;border:1px solid #333;color:#fff}
-button{background:#7c3aed;border:none;color:#fff;padding:12px 20px;border-radius:25px}
+input{flex:1;padding:13px;border-radius:25px;background:#222;border:1px solid #333;color:#fff;outline:none}
+button{background:#7c3aed;border:none;color:#fff;padding:12px 20px;border-radius:25px;cursor:pointer}
 </style>
 </head>
 <body>
-<div id="chat"><div class="msg bot">جربني، اسأل أي سؤال مفاجئ، وأنا هجاوب بجد بدون هبد. لو هبدت قولّي "بتهبد" وهصلح نفسي.</div></div>
-<div id="bar"><input id="q" placeholder="اسأل سؤالك المفاجئ..."><button onclick="ask()">إرسال</button></div>
+
+<div id="top">
+<div id="title">AI مش بيهبد</div>
+<button id="clear" onclick="clearChat()">مسح المحادثة</button>
+</div>
+
+<div id="chat"></div>
+
+<div id="bar">
+<input id="q" placeholder="اسأل سؤالك المفاجئ...">
+<button onclick="ask()">إرسال</button>
+</div>
+
 <script>
-let chat=document.getElementById('chat'), input=document.getElementById('q');
+const chat=document.getElementById('chat');
+const input=document.getElementById('q');
+const SAVE_KEY='ask_ai_chat';
+
+function saveChat(){
+localStorage.setItem(SAVE_KEY,chat.innerHTML);
+}
+
+function loadChat(){
+const saved=localStorage.getItem(SAVE_KEY);
+
+if(saved){
+chat.innerHTML=saved;
+}else{
+add('جربني، اسأل أي سؤال مفاجئ، وأنا هجاوب بجد بدون هبد. لو هبدت قولّي "بتهبد" وهصلح نفسي.','bot');
+}
+
+chat.scrollTop=chat.scrollHeight;
+}
+
+function clearChat(){
+if(confirm('عايز تمسح المحادثة؟')){
+localStorage.removeItem(SAVE_KEY);
+chat.innerHTML='';
+add('تم مسح المحادثة. اسألني أي سؤال.','bot');
+}
+}
+
 async function ask(){
- let userQ=input.value.trim();
- if(!userQ) return;
- add(userQ,'me');
- input.value='';
- let id='b'+Date.now();
- add('بفكر بذكاء...', 'bot', id);
+let userQ=input.value.trim();
 
- // برمجة عشان ميهبدش: بنقوله انت مساعد ذكي وممنوع الهبد
- let systemPrompt = `انت مساعد ذكي مصري، جاوب باختصار ومباشرة وبدون هبد. لو مش عارف قول مش عارف. جاوب بالعربي. السؤال: `;
- let fullPrompt = systemPrompt + userQ;
+if(!userQ)return;
 
- try{
-   // موديل openai الكبير مش الصغير
-   let res = await fetch('https://text.pollinations.ai/' + encodeURIComponent(fullPrompt) + '?model=openai&system=You%20are%20a%20helpful%20smart%20assistant%20who%20never%20hallucinates.%20Answer%20in%20Arabic%20Egyptian%20dialect%20short%20and%20useful.');
-   let text = await res.text();
-   document.getElementById(id).innerText = text;
- }catch(e){
-   document.getElementById(id).innerText = 'النت فصل، جرب تاني';
- }
+add(userQ,'me');
+input.value='';
+
+let id='b'+Date.now();
+
+add('بفكر بذكاء...','bot',id);
+
+let systemPrompt='انت مساعد ذكي مصري، جاوب باختصار ومباشرة وبدون هبد. لو مش عارف قول مش عارف. جاوب بالعربي. السؤال: ';
+
+let fullPrompt=systemPrompt+userQ;
+
+try{
+let res=await fetch(
+'https://text.pollinations.ai/'+
+encodeURIComponent(fullPrompt)+
+'?model=openai&system=You%20are%20a%20helpful%20smart%20assistant%20who%20never%20hallucinates.%20Answer%20in%20Arabic%20Egyptian%20dialect%20short%20and%20useful.'
+);
+
+let text=await res.text();
+
+document.getElementById(id).innerText=text;
+
+saveChat();
+
+}catch(e){
+
+document.getElementById(id).innerText='النت فصل، جرب تاني';
+
+saveChat();
 }
+}
+
 function add(t,c,id=''){
- let d=document.createElement('div');
- d.className='msg '+c;
- if(id) d.id=id;
- d.innerText=t;
- chat.appendChild(d);
- chat.scrollTop=chat.scrollHeight;
+
+let d=document.createElement('div');
+
+d.className='msg '+c;
+
+if(id)d.id=id;
+
+d.innerText=t;
+
+chat.appendChild(d);
+
+chat.scrollTop=chat.scrollHeight;
+
+saveChat();
 }
-document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')ask()});
+
+input.addEventListener('keydown',e=>{
+if(e.key==='Enter')ask();
+});
+
+loadChat();
 </script>
+
 </body>
 </html>
