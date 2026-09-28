@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ask ai </title>
+<link rel="icon" href="images.jpg">
+<style>
+body{margin:0;background:#000;color:#fff;font-family:Arial;height:100vh;display:flex;flex-direction:column}
+#chat{flex:1;overflow:auto;padding:15px;display:flex;flex-direction:column;gap:10px}
+.msg{padding:12px 15px;border-radius:15px;max-width:90%;line-height:1.7;white-space:pre-wrap}
+.me{background:#7c3aed;align-self:flex-end}
+.bot{background:#18181b;align-self:flex-start;border:1px solid #333}
+#bar{display:flex;gap:8px;padding:12px;background:#111}
+input{flex:1;padding:13px;border-radius:25px;background:#222;border:1px solid #333;color:#fff}
+button{background:#7c3aed;border:none;color:#fff;padding:12px 20px;border-radius:25px}
+</style>
+</head>
+<body>
+<div id="chat"><div class="msg bot">جربني، اسأل أي سؤال مفاجئ، وأنا هجاوب بجد بدون هبد. لو هبدت قولّي "بتهبد" وهصلح نفسي.</div></div>
+<div id="bar"><input id="q" placeholder="اسأل سؤالك المفاجئ..."><button onclick="ask()">إرسال</button></div>
+<script>
+let chat=document.getElementById('chat'), input=document.getElementById('q');
+async function ask(){
+ let userQ=input.value.trim();
+ if(!userQ) return;
+ add(userQ,'me');
+ input.value='';
+ let id='b'+Date.now();
+ add('بفكر بذكاء...', 'bot', id);
+
+ // برمجة عشان ميهبدش: بنقوله انت مساعد ذكي وممنوع الهبد
+ let systemPrompt = `انت مساعد ذكي مصري، جاوب باختصار ومباشرة وبدون هبد. لو مش عارف قول مش عارف. جاوب بالعربي. السؤال: `;
+ let fullPrompt = systemPrompt + userQ;
+
+ try{
+   // موديل openai الكبير مش الصغير
+   let res = await fetch('https://text.pollinations.ai/' + encodeURIComponent(fullPrompt) + '?model=openai&system=You%20are%20a%20helpful%20smart%20assistant%20who%20never%20hallucinates.%20Answer%20in%20Arabic%20Egyptian%20dialect%20short%20and%20useful.');
+   let text = await res.text();
+   document.getElementById(id).innerText = text;
+ }catch(e){
+   document.getElementById(id).innerText = 'النت فصل، جرب تاني';
+ }
+}
+function add(t,c,id=''){
+ let d=document.createElement('div');
+ d.className='msg '+c;
+ if(id) d.id=id;
+ d.innerText=t;
+ chat.appendChild(d);
+ chat.scrollTop=chat.scrollHeight;
+}
+document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')ask()});
+</script>
+</body>
+</html>
