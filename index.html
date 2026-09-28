@@ -1,126 +1,266 @@
+```html
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>AI مش بيهبد</title>
 <style>
-body{margin:0;background:#000;color:#fff;font-family:Arial;height:100vh;display:flex;flex-direction:column}
-#top{display:flex;justify-content:space-between;align-items:center;padding:12px 15px;background:#111;border-bottom:1px solid #333}
-#title{font-size:20px;font-weight:bold}
-#clear{background:#dc2626;border:none;color:#fff;padding:9px 14px;border-radius:20px;cursor:pointer}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font-family:Arial;height:100vh;display:flex;overflow:hidden}
+#side{width:260px;background:#111;border-left:1px solid #333;display:flex;flex-direction:column;padding:12px}
+#newChat{background:#7c3aed;color:#fff;border:0;border-radius:12px;padding:13px;cursor:pointer;font-size:16px;margin-bottom:12px}
+#list{flex:1;overflow:auto}
+.item{display:flex;align-items:center;gap:6px;background:#18181b;border:1px solid #292929;border-radius:10px;padding:10px;margin-bottom:7px;cursor:pointer}
+.item.active{background:#27272a;border-color:#7c3aed}
+.itemTitle{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.del{background:#dc2626;border:0;color:#fff;border-radius:7px;padding:5px 8px;cursor:pointer}
+#main{flex:1;display:flex;flex-direction:column;min-width:0}
+#top{padding:14px;background:#111;border-bottom:1px solid #333;text-align:center;font-size:20px;font-weight:bold}
 #chat{flex:1;overflow:auto;padding:15px;display:flex;flex-direction:column;gap:10px}
 .msg{padding:12px 15px;border-radius:15px;max-width:90%;line-height:1.7;white-space:pre-wrap}
 .me{background:#7c3aed;align-self:flex-end}
 .bot{background:#18181b;align-self:flex-start;border:1px solid #333}
 #bar{display:flex;gap:8px;padding:12px;background:#111}
 input{flex:1;padding:13px;border-radius:25px;background:#222;border:1px solid #333;color:#fff;outline:none}
-button{background:#7c3aed;border:none;color:#fff;padding:12px 20px;border-radius:25px;cursor:pointer}
+#send{background:#7c3aed;border:0;color:#fff;padding:12px 20px;border-radius:25px;cursor:pointer}
+@media(max-width:650px){
+#side{width:210px}
+#top{font-size:18px}
+}
+@media(max-width:480px){
+#side{width:180px}
+}
 </style>
 </head>
 <body>
 
-<div id="top">
-<div id="title">AI مش بيهبد</div>
-<button id="clear" onclick="clearChat()">مسح المحادثة</button>
-</div>
+<aside id="side">
+<button id="newChat" onclick="newChat()">＋ محادثة جديدة</button>
+<div id="list"></div>
+</aside>
+
+<main id="main">
+<div id="top">AI مش بيهبد</div>
 
 <div id="chat"></div>
 
 <div id="bar">
 <input id="q" placeholder="اسأل سؤالك المفاجئ...">
-<button onclick="ask()">إرسال</button>
+<button id="send" onclick="ask()">إرسال</button>
 </div>
+</main>
 
 <script>
 const chat=document.getElementById('chat');
 const input=document.getElementById('q');
-const SAVE_KEY='ask_ai_chat';
+const list=document.getElementById('list');
 
-function saveChat(){
-localStorage.setItem(SAVE_KEY,chat.innerHTML);
+let conversations=JSON.parse(localStorage.getItem('ask_ai_conversations')||'[]');
+let currentId=localStorage.getItem('ask_ai_current')||'';
+
+function saveAll(){
+localStorage.setItem('ask_ai_conversations',JSON.stringify(conversations));
+localStorage.setItem('ask_ai_current',currentId);
 }
 
-function loadChat(){
-const saved=localStorage.getItem(SAVE_KEY);
+function createConversation(){
+return{
+id:'c'+Date.now(),
+title:'محادثة جديدة',
+messages:[
+{
+text:'جربني، اسأل أي سؤال مفاجئ، وأنا هجاوب بجد بدون هبد. لو هبدت قولّي "بتهبد" وهصلح نفسي.',
+type:'bot'
+}
+]
+};
+}
 
-if(saved){
-chat.innerHTML=saved;
+function newChat(){
+const c=createConversation();
+conversations.unshift(c);
+currentId=c.id;
+saveAll();
+renderList();
+renderChat();
+input.focus();
+}
+
+function current(){
+return conversations.find(c=>c.id===currentId);
+}
+
+function renderList(){
+list.innerHTML='';
+
+conversations.forEach(c=>{
+
+const item=document.createElement('div');
+item.className='item'+(c.id===currentId?' active':'');
+
+const title=document.createElement('div');
+title.className='itemTitle';
+title.innerText=c.title;
+
+const del=document.createElement('button');
+del.className='del';
+del.innerText='×';
+
+del.onclick=e=>{
+e.stopPropagation();
+
+conversations=conversations.filter(x=>x.id!==c.id);
+
+if(currentId===c.id){
+if(conversations.length){
+currentId=conversations[0].id;
 }else{
-add('جربني، اسأل أي سؤال مفاجئ، وأنا هجاوب بجد بدون هبد. لو هبدت قولّي "بتهبد" وهصلح نفسي.','bot');
+const n=createConversation();
+conversations.push(n);
+currentId=n.id;
 }
+}
+
+saveAll();
+renderList();
+renderChat();
+};
+
+item.onclick=()=>{
+currentId=c.id;
+saveAll();
+renderList();
+renderChat();
+};
+
+item.appendChild(title);
+item.appendChild(del);
+list.appendChild(item);
+});
+}
+
+function renderChat(){
+chat.innerHTML='';
+
+const c=current();
+
+if(!c)return;
+
+c.messages.forEach(m=>{
+addElement(m.text,m.type);
+});
 
 chat.scrollTop=chat.scrollHeight;
 }
 
-function clearChat(){
-if(confirm('عايز تمسح المحادثة؟')){
-localStorage.removeItem(SAVE_KEY);
-chat.innerHTML='';
-add('تم مسح المحادثة. اسألني أي سؤال.','bot');
+function addElement(text,type,id=''){
+const d=document.createElement('div');
+d.className='msg '+type;
+if(id)d.id=id;
+d.innerText=text;
+chat.appendChild(d);
+chat.scrollTop=chat.scrollHeight;
 }
+
+function addMessage(text,type){
+const c=current();
+
+if(!c)return;
+
+c.messages.push({
+text:text,
+type:type
+});
+
+addElement(text,type);
+saveAll();
 }
 
 async function ask(){
-let userQ=input.value.trim();
+
+const userQ=input.value.trim();
 
 if(!userQ)return;
 
-add(userQ,'me');
+const c=current();
+
+if(!c)return;
+
+addMessage(userQ,'me');
+
 input.value='';
 
-let id='b'+Date.now();
+if(c.title==='محادثة جديدة'){
+c.title=userQ.slice(0,30);
+renderList();
+saveAll();
+}
 
-add('بفكر بذكاء...','bot',id);
+const id='b'+Date.now();
+
+addElement('بفكر بذكاء...','bot',id);
 
 let systemPrompt='انت مساعد ذكي مصري، جاوب باختصار ومباشرة وبدون هبد. لو مش عارف قول مش عارف. جاوب بالعربي. السؤال: ';
 
 let fullPrompt=systemPrompt+userQ;
 
 try{
-let res=await fetch(
+
+const res=await fetch(
 'https://text.pollinations.ai/'+
 encodeURIComponent(fullPrompt)+
 '?model=openai&system=You%20are%20a%20helpful%20smart%20assistant%20who%20never%20hallucinates.%20Answer%20in%20Arabic%20Egyptian%20dialect%20short%20and%20useful.'
 );
 
-let text=await res.text();
+const text=await res.text();
 
-document.getElementById(id).innerText=text;
+const answer=document.getElementById(id);
 
-saveChat();
+answer.innerText=text;
+
+c.messages.push({
+text:text,
+type:'bot'
+});
+
+saveAll();
 
 }catch(e){
 
-document.getElementById(id).innerText='النت فصل، جرب تاني';
+const error='النت فصل، جرب تاني';
 
-saveChat();
+document.getElementById(id).innerText=error;
+
+c.messages.push({
+text:error,
+type:'bot'
+});
+
+saveAll();
 }
-}
-
-function add(t,c,id=''){
-
-let d=document.createElement('div');
-
-d.className='msg '+c;
-
-if(id)d.id=id;
-
-d.innerText=t;
-
-chat.appendChild(d);
-
-chat.scrollTop=chat.scrollHeight;
-
-saveChat();
 }
 
 input.addEventListener('keydown',e=>{
 if(e.key==='Enter')ask();
 });
 
-loadChat();
+if(!conversations.length){
+const c=createConversation();
+conversations.push(c);
+currentId=c.id;
+saveAll();
+}
+
+if(!currentId||!current()){
+currentId=conversations[0].id;
+saveAll();
+}
+
+renderList();
+renderChat();
 </script>
 
 </body>
 </html>
+```
